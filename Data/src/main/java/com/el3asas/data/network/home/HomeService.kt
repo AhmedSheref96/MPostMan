@@ -34,4 +34,15 @@ class HomeService @Inject constructor(private val client: HttpClient) {
             setBody(mBody)
         }
     }
+
+    suspend fun sendPutApi(
+        url: String,
+        params: StringValues? = null,
+        mHeaders: StringValues? = null,
+        mBody: Any? = null
+    ): HttpResponse {
+        return client.put(url) {
+
+        }
+    }
 }

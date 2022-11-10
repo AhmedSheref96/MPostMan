@@ -14,12 +14,13 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(private val repository: MainRepository) : ViewModel() {
     val selectedRequestType = mutableStateOf("GET")
     val httpRequestResponse = mutableStateOf("")
-    val mUrl = mutableStateOf("")
+    val baseUrl = mutableStateOf("")
+    val pathUrl = mutableStateOf("")
 
     private fun sendGetApiRequest() {
         viewModelScope.launch {
             httpRequestResponse.value =
-                when (val response = repository.sendGetApi(url = mUrl.value)) {
+                when (val response = repository.sendGetApi(url = baseUrl.value + pathUrl.value)) {
                     is MResponse.Success -> response.response.call.response.body()
                     is MResponse.Error -> response.errorMsg
                 }
@@ -29,7 +30,7 @@ class MainViewModel @Inject constructor(private val repository: MainRepository) 
     private fun sendPostApiRequest() {
         viewModelScope.launch {
             httpRequestResponse.value =
-                when (val response = repository.sendPostApi(url = mUrl.value)) {
+                when (val response = repository.sendPostApi(url = baseUrl.value + pathUrl.value)) {
                     is MResponse.Success -> response.response.call.response.body()
                     is MResponse.Error -> response.errorMsg
                 }

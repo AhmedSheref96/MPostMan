@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        compose_version = '1.3.0'
+        compose_version = '1.4.0-alpha02'
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-serialization:1.7.20"
