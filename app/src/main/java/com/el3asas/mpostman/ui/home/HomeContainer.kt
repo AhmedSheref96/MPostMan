@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
@@ -22,11 +23,12 @@ import com.google.accompanist.pager.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+@Preview(showBackground = true)
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun HomeMainContainer(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel?
+    viewModel: MainViewModel? = null
 ) {
     val responseValue by remember {
         viewModel?.httpRequestResponse ?: mutableStateOf("")
@@ -34,12 +36,16 @@ fun HomeMainContainer(
 
     val coroutineScope = rememberCoroutineScope()
     var mainPagerState = rememberPagerState()
+    var mainPagesTransaction by remember {
+        mutableStateOf(0)
+    }
 
     LaunchedEffect(Unit) {
         snapshotFlow { responseValue }
             .collect {
                 if (it.isEmpty().not())
-                    mainPagerState = PagerState(1)
+                    mainPagesTransaction = 1
+//                    mainPagerState = PagerState(1)
             }
     }
 
@@ -73,19 +79,31 @@ fun HomeMainContainer(
                 mPathUrl = viewModel?.pathUrl
             )
 
-            MainPager(
+//            MainPager(
+//                modifier = Modifier
+//                    .constrainAs(pagerRef) {
+//                        top.linkTo(pathUrlRef.bottom)
+//                        bottom.linkTo(parent.bottom)
+//                        height = Dimension.fillToConstraints
+//                    },
+//                pagerState = mainPagerState,
+//                coroutineScope = coroutineScope,
+//                viewModel = viewModel,
+//                mResponse = responseValue
+//            )
+
+            MainPages(
                 modifier = Modifier
                     .constrainAs(pagerRef) {
                         top.linkTo(pathUrlRef.bottom)
                         bottom.linkTo(parent.bottom)
                         height = Dimension.fillToConstraints
                     },
-                pagerState = mainPagerState,
+                pageTransformation = mainPagesTransaction,
                 coroutineScope = coroutineScope,
                 viewModel = viewModel,
                 mResponse = responseValue
             )
-
             TabBtn(
                 modifier = Modifier
                     .padding(8.dp)
@@ -97,7 +115,8 @@ fun HomeMainContainer(
                     }, btnString = "Results"
             ) {
                 coroutineScope.launch {
-                    mainPagerState.animateScrollToPage(1)
+//                    mainPagerState.animateScrollToPage(1)
+                    mainPagesTransaction = 1
                 }
             }
 
@@ -112,7 +131,8 @@ fun HomeMainContainer(
                     }, btnString = "Inputs"
             ) {
                 coroutineScope.launch {
-                    mainPagerState.animateScrollToPage(0)
+//                    mainPagerState.animateScrollToPage(0)
+                    mainPagesTransaction = 0
                 }
             }
 
@@ -166,13 +186,18 @@ fun InputsPager(
     }
 
     val itemsTitles = listOf("headers", "body", "headers", "body", "headers", "body")
-    ScrollableTabRow(selectedTabIndex = pagerState.currentPage, indicator = { tabPositions ->
-        TabRowDefaults.Indicator(
-            modifier = Modifier.pagerTabIndicatorOffset(pagerState, tabPositions)
-        )
-    }, modifier = Modifier) {
+    ScrollableTabRow(
+        selectedTabIndex = pagerState.currentPage,
+        edgePadding = 0.dp,
+        indicator = { tabPositions ->
+            TabRowDefaults.Indicator(
+                modifier = Modifier.pagerTabIndicatorOffset(pagerState, tabPositions)
+            )
+        }
+    ) {
         for (itemPos in 0 until 6) {
-            Tab(selected = pagerState.currentPage == itemPos,
+            Tab(modifier = Modifier.background(MaterialTheme.colors.primarySurface),
+                selected = pagerState.currentPage == itemPos,
                 onClick = {
                     coroutineScope.launch {
                         pagerState.scrollToPage(itemPos)
@@ -184,6 +209,32 @@ fun InputsPager(
                     modifier = Modifier.padding(16.dp),
                     textAlign = TextAlign.Center,
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalPagerApi::class)
+@Composable
+fun MainPages(
+    modifier: Modifier = Modifier,
+    pageTransformation: Int,
+    coroutineScope: CoroutineScope,
+    viewModel: MainViewModel?,
+    mResponse: String
+) {
+    Box(modifier = modifier) {
+        when (pageTransformation) {
+            0 -> {
+                val inputPagerState = rememberPagerState()
+                InputsPager(
+                    pagerState = inputPagerState,
+                    coroutineScope = coroutineScope,
+                    viewModel = viewModel
+                )
+            }
+            1 -> {
+                ResultsPage(mResponse = mResponse)
             }
         }
     }
