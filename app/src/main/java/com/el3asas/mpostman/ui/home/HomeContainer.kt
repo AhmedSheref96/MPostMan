@@ -3,11 +3,15 @@ package com.el3asas.mpostman.ui.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -17,8 +21,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import com.el3asas.models.ParamModel
 import com.el3asas.mpostman.MainViewModel
-import com.el3asas.mpostman.utils.disabledHorizontalPointerInputScroll
 import com.google.accompanist.pager.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -35,7 +39,6 @@ fun HomeMainContainer(
     }
 
     val coroutineScope = rememberCoroutineScope()
-    var mainPagerState = rememberPagerState()
     var mainPagesTransaction by remember {
         mutableStateOf(0)
     }
@@ -45,11 +48,12 @@ fun HomeMainContainer(
             .collect {
                 if (it.isEmpty().not())
                     mainPagesTransaction = 1
-//                    mainPagerState = PagerState(1)
             }
     }
 
-    Scaffold {
+    Scaffold(floatingActionButton = {
+        SubmitRequestBtn(viewModel = viewModel)
+    }) {
         ConstraintLayout(
             modifier = Modifier
                 .padding(it)
@@ -79,19 +83,6 @@ fun HomeMainContainer(
                 mPathUrl = viewModel?.pathUrl
             )
 
-//            MainPager(
-//                modifier = Modifier
-//                    .constrainAs(pagerRef) {
-//                        top.linkTo(pathUrlRef.bottom)
-//                        bottom.linkTo(parent.bottom)
-//                        height = Dimension.fillToConstraints
-//                    },
-//                pagerState = mainPagerState,
-//                coroutineScope = coroutineScope,
-//                viewModel = viewModel,
-//                mResponse = responseValue
-//            )
-
             MainPages(
                 modifier = Modifier
                     .constrainAs(pagerRef) {
@@ -103,48 +94,39 @@ fun HomeMainContainer(
                 coroutineScope = coroutineScope,
                 viewModel = viewModel,
                 mResponse = responseValue
-            )
-            TabBtn(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .constrainAs(resultsTab) {
-                        bottom.linkTo(submitRequestRef.top)
-                        absoluteLeft.linkTo(inputsTab.absoluteRight)
-                        absoluteRight.linkTo(parent.absoluteRight)
-                        width = Dimension.fillToConstraints
-                    }, btnString = "Results"
-            ) {
-                coroutineScope.launch {
-//                    mainPagerState.animateScrollToPage(1)
-                    mainPagesTransaction = 1
-                }
+            ) { pageIndex ->
+                mainPagesTransaction = pageIndex
             }
+//            TabBtn(
+//                modifier = Modifier
+//                    .padding(8.dp)
+//                    .constrainAs(resultsTab) {
+//                        bottom.linkTo(parent.bottom)
+//                        absoluteLeft.linkTo(inputsTab.absoluteRight)
+//                        absoluteRight.linkTo(parent.absoluteRight)
+//                        width = Dimension.fillToConstraints
+//                    }, btnString = "Results"
+//            ) {
+//                coroutineScope.launch {
+//                    mainPagesTransaction = 1
+//                }
+//            }
+//
+//            TabBtn(
+//                modifier = Modifier
+//                    .padding(8.dp)
+//                    .constrainAs(inputsTab) {
+//                        bottom.linkTo(parent.bottom)
+//                        absoluteRight.linkTo(resultsTab.absoluteLeft)
+//                        absoluteLeft.linkTo(parent.absoluteLeft)
+//                        width = Dimension.fillToConstraints
+//                    }, btnString = "Inputs"
+//            ) {
+//                coroutineScope.launch {
+//                    mainPagesTransaction = 0
+//                }
+//            }
 
-            TabBtn(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .constrainAs(inputsTab) {
-                        bottom.linkTo(submitRequestRef.top)
-                        absoluteRight.linkTo(resultsTab.absoluteLeft)
-                        absoluteLeft.linkTo(parent.absoluteLeft)
-                        width = Dimension.fillToConstraints
-                    }, btnString = "Inputs"
-            ) {
-                coroutineScope.launch {
-//                    mainPagerState.animateScrollToPage(0)
-                    mainPagesTransaction = 0
-                }
-            }
-
-            SubmitRequestBtn(
-                modifier = Modifier
-                    .fillMaxWidth(.9f)
-                    .constrainAs(submitRequestRef) {
-                        bottom.linkTo(parent.bottom)
-                        absoluteLeft.linkTo(parent.absoluteLeft)
-                        absoluteRight.linkTo(parent.absoluteRight)
-                    }, viewModel
-            )
         }
     }
 }
@@ -157,60 +139,65 @@ fun InputsPager(
     coroutineScope: CoroutineScope,
     viewModel: MainViewModel?
 ) {
-    HorizontalPager(
+    Column(
         modifier = modifier
-            .fillMaxSize(),
-        state = pagerState,
-        count = 6
-    ) { page ->
-        when (page) {
-            0 -> {
-                ParamsView(modifier = modifier, viewModel = viewModel)
-            }
-            1 -> {
-                BodyEntersView(modifier = modifier, viewModel = viewModel)
-            }
-            2 -> {
-                ParamsView(modifier = modifier, viewModel = viewModel)
-            }
-            3 -> {
-                BodyEntersView(modifier = modifier, viewModel = viewModel)
-            }
-            4 -> {
-                ParamsView(modifier = modifier, viewModel = viewModel)
-            }
-            5 -> {
-                BodyEntersView(modifier = modifier, viewModel = viewModel)
-            }
-        }
-    }
-
-    val itemsTitles = listOf("headers", "body", "headers", "body", "headers", "body")
-    ScrollableTabRow(
-        selectedTabIndex = pagerState.currentPage,
-        edgePadding = 0.dp,
-        indicator = { tabPositions ->
-            TabRowDefaults.Indicator(
-                modifier = Modifier.pagerTabIndicatorOffset(pagerState, tabPositions)
-            )
-        }
+            .fillMaxSize()
     ) {
-        for (itemPos in 0 until 6) {
-            Tab(modifier = Modifier.background(MaterialTheme.colors.primarySurface),
-                selected = pagerState.currentPage == itemPos,
-                onClick = {
-                    coroutineScope.launch {
-                        pagerState.scrollToPage(itemPos)
-                    }
-                }
-            ) {
-                Text(
-                    text = itemsTitles[itemPos],
-                    modifier = Modifier.padding(16.dp),
-                    textAlign = TextAlign.Center,
+        val itemsTitles = listOf("headers", "body", "headers", "body", "headers", "body")
+        ScrollableTabRow(
+            selectedTabIndex = pagerState.currentPage,
+            edgePadding = 0.dp,
+            indicator = { tabPositions ->
+                TabRowDefaults.Indicator(
+                    modifier = Modifier.pagerTabIndicatorOffset(pagerState, tabPositions)
                 )
             }
+        ) {
+            for (itemPos in 0 until 6) {
+                Tab(modifier = Modifier.background(MaterialTheme.colors.primarySurface),
+                    selected = pagerState.currentPage == itemPos,
+                    onClick = {
+                        coroutineScope.launch {
+                            pagerState.scrollToPage(itemPos)
+                        }
+                    }
+                ) {
+                    Text(
+                        text = itemsTitles[itemPos],
+                        modifier = Modifier.padding(16.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
         }
+        HorizontalPager(
+            modifier = modifier
+                .fillMaxSize(),
+            state = pagerState,
+            count = 6
+        ) { page ->
+            when (page) {
+                0 -> {
+                    ParamsView(modifier = modifier, viewModel = viewModel)
+                }
+                1 -> {
+                    BodyEntersView(modifier = modifier, viewModel = viewModel)
+                }
+                2 -> {
+                    ParamsView(modifier = modifier, viewModel = viewModel)
+                }
+                3 -> {
+                    BodyEntersView(modifier = modifier, viewModel = viewModel)
+                }
+                4 -> {
+                    ParamsView(modifier = modifier, viewModel = viewModel)
+                }
+                5 -> {
+                    BodyEntersView(modifier = modifier, viewModel = viewModel)
+                }
+            }
+        }
+
     }
 }
 
@@ -221,13 +208,38 @@ fun MainPages(
     pageTransformation: Int,
     coroutineScope: CoroutineScope,
     viewModel: MainViewModel?,
-    mResponse: String
+    mResponse: String,
+    onClickTab: (Int) -> Unit
 ) {
-    Box(modifier = modifier) {
+    Column(modifier = modifier) {
+        Row(modifier = modifier.fillMaxWidth()) {
+            TabBtn(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .fillMaxWidth(.5f),
+                btnString = "Inputs"
+            ) {
+                coroutineScope.launch {
+                    onClickTab(0)
+                }
+            }
+            TabBtn(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .fillMaxWidth(),
+                btnString = "Results"
+            ) {
+                coroutineScope.launch {
+                    onClickTab(1)
+                }
+            }
+        }
+
         when (pageTransformation) {
             0 -> {
                 val inputPagerState = rememberPagerState()
                 InputsPager(
+                    modifier = modifier,
                     pagerState = inputPagerState,
                     coroutineScope = coroutineScope,
                     viewModel = viewModel
@@ -240,6 +252,7 @@ fun MainPages(
     }
 }
 
+/*
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun MainPager(
@@ -272,7 +285,7 @@ fun MainPager(
     }
 
 }
-
+*/
 @Composable
 fun BodyEntersView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
     Column(
@@ -286,12 +299,72 @@ fun BodyEntersView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
 
 @Composable
 fun ParamsView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Red)
     ) {
-        Text(text = "enter params here", modifier = Modifier.align(CenterHorizontally))
+        itemsIndexed(items = viewModel?.paramsValues!!.toList()) { index: Int, item: MutableState<ParamModel> ->
+            if (index == 0) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth(.5f)
+                            .background(Color.LightGray)
+                            .padding(8.dp),
+                        text = "KEY",
+                    )
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.LightGray)
+                            .padding(8.dp),
+                        text = "VALUE"
+                    )
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth()) {
+                val paramItem by remember { item }
+                TextField(
+                    modifier = Modifier
+                        .fillMaxWidth(.5f)
+                        .padding(8.dp),
+                    value = paramItem.name,
+                    onValueChange = {
+                        paramItem.name = it
+                    })
+                TextField(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    value = paramItem.value,
+                    onValueChange = {
+                        paramItem.value = it
+                    })
+            }
+            if (index == viewModel.paramsValues.size - 1) {
+                Button(
+                    modifier = Modifier.padding(8.dp),
+                    onClick = {
+                        viewModel.paramsValues.add(
+                            mutableStateOf(
+                                ParamModel(
+                                    name = "",
+                                    value = ""
+                                )
+                            )
+                        )
+                    }
+                ) {
+                    Text(text = "Add Param")
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        tint = Color(0xF0FFFFFF),
+                        contentDescription = ""
+                    )
+                }
+            }
+        }
+        
     }
 }
 
@@ -392,13 +465,6 @@ fun RequestTypesDropDown(modifier: Modifier = Modifier, mSelectedItem: MutableSt
 }
 
 @Composable
-fun PrintResults(modifier: Modifier = Modifier, mResponse: String) {
-    Box(modifier = modifier.padding(8.dp)) {
-        Text(text = mResponse)
-    }
-}
-
-@Composable
 fun TabBtn(modifier: Modifier = Modifier, btnString: String, action: () -> Unit) {
     Button(
         modifier = modifier,
@@ -410,10 +476,19 @@ fun TabBtn(modifier: Modifier = Modifier, btnString: String, action: () -> Unit)
 }
 
 @Composable
-fun SubmitRequestBtn(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
-    Button(modifier = modifier, onClick = {
-        viewModel?.sendRequest()
-    }) {
-        Text(text = "Send Request")
-    }
+fun SubmitRequestBtn(viewModel: MainViewModel?) {
+    ExtendedFloatingActionButton(
+        text = {
+            Row {
+                Text(text = "send request")
+                Icon(
+                    imageVector = Icons.Filled.Send,
+                    modifier = Modifier.size(24.dp),
+                    contentDescription = "send request"
+                )
+            }
+        },
+        onClick = {
+            viewModel?.sendRequest()
+        })
 }

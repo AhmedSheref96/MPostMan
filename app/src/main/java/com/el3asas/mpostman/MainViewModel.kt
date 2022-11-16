@@ -1,8 +1,10 @@
 package com.el3asas.mpostman
 
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.el3asas.models.ParamModel
 import com.el3asas.mpostman.repos.MainRepository
 import com.el3asas.mpostman.utils.MResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +18,9 @@ class MainViewModel @Inject constructor(private val repository: MainRepository) 
     val httpRequestResponse = mutableStateOf("")
     val baseUrl = mutableStateOf("")
     val pathUrl = mutableStateOf("")
+
+    val paramsValues =
+        ArrayList<MutableState<ParamModel>>().apply { add(mutableStateOf(ParamModel())) }
 
     private fun sendGetApiRequest() {
         viewModelScope.launch {
