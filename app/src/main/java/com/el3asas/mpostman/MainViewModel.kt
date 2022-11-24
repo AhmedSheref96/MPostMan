@@ -1,6 +1,8 @@
 package com.el3asas.mpostman
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,9 +20,13 @@ class MainViewModel @Inject constructor(private val repository: MainRepository) 
     val httpRequestResponse = mutableStateOf("")
     val baseUrl = mutableStateOf("")
     val pathUrl = mutableStateOf("")
+    var count = 0
 
-    val paramsValues =
-        ArrayList<MutableState<ParamModel>>().apply { add(mutableStateOf(ParamModel())) }
+    @SuppressLint("MutableCollectionMutableState")
+    var paramsValues = mutableStateListOf(
+        ParamModel(),
+        ParamModel()
+    )
 
     private fun sendGetApiRequest() {
         viewModelScope.launch {

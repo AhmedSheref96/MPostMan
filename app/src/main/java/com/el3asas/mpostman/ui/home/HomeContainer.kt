@@ -97,36 +97,6 @@ fun HomeMainContainer(
             ) { pageIndex ->
                 mainPagesTransaction = pageIndex
             }
-//            TabBtn(
-//                modifier = Modifier
-//                    .padding(8.dp)
-//                    .constrainAs(resultsTab) {
-//                        bottom.linkTo(parent.bottom)
-//                        absoluteLeft.linkTo(inputsTab.absoluteRight)
-//                        absoluteRight.linkTo(parent.absoluteRight)
-//                        width = Dimension.fillToConstraints
-//                    }, btnString = "Results"
-//            ) {
-//                coroutineScope.launch {
-//                    mainPagesTransaction = 1
-//                }
-//            }
-//
-//            TabBtn(
-//                modifier = Modifier
-//                    .padding(8.dp)
-//                    .constrainAs(inputsTab) {
-//                        bottom.linkTo(parent.bottom)
-//                        absoluteRight.linkTo(resultsTab.absoluteLeft)
-//                        absoluteLeft.linkTo(parent.absoluteLeft)
-//                        width = Dimension.fillToConstraints
-//                    }, btnString = "Inputs"
-//            ) {
-//                coroutineScope.launch {
-//                    mainPagesTransaction = 0
-//                }
-//            }
-
         }
     }
 }
@@ -143,7 +113,7 @@ fun InputsPager(
         modifier = modifier
             .fillMaxSize()
     ) {
-        val itemsTitles = listOf("headers", "body", "headers", "body", "headers", "body")
+        val itemsTitles = listOf("headers", "body")
         ScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
             edgePadding = 0.dp,
@@ -153,7 +123,7 @@ fun InputsPager(
                 )
             }
         ) {
-            for (itemPos in 0 until 6) {
+            for (itemPos in 0 until 2) {
                 Tab(modifier = Modifier.background(MaterialTheme.colors.primarySurface),
                     selected = pagerState.currentPage == itemPos,
                     onClick = {
@@ -174,27 +144,11 @@ fun InputsPager(
             modifier = modifier
                 .fillMaxSize(),
             state = pagerState,
-            count = 6
+            count = 2
         ) { page ->
             when (page) {
-                0 -> {
-                    ParamsView(modifier = modifier, viewModel = viewModel)
-                }
-                1 -> {
-                    BodyEntersView(modifier = modifier, viewModel = viewModel)
-                }
-                2 -> {
-                    ParamsView(modifier = modifier, viewModel = viewModel)
-                }
-                3 -> {
-                    BodyEntersView(modifier = modifier, viewModel = viewModel)
-                }
-                4 -> {
-                    ParamsView(modifier = modifier, viewModel = viewModel)
-                }
-                5 -> {
-                    BodyEntersView(modifier = modifier, viewModel = viewModel)
-                }
+                0 -> ParamsView(modifier = modifier, viewModel = viewModel)
+                1 -> BodyEntersView(modifier = modifier, viewModel = viewModel)
             }
         }
 
@@ -252,40 +206,6 @@ fun MainPages(
     }
 }
 
-/*
-@OptIn(ExperimentalPagerApi::class)
-@Composable
-fun MainPager(
-    modifier: Modifier = Modifier,
-    pagerState: PagerState,
-    coroutineScope: CoroutineScope,
-    viewModel: MainViewModel?,
-    mResponse: String
-) {
-    val inputPagerState = rememberPagerState()
-    Box(modifier = modifier.disabledHorizontalPointerInputScroll()) {
-        HorizontalPager(
-            count = 2,
-            modifier = Modifier,
-            state = pagerState
-        ) { page ->
-            when (page) {
-                0 -> {
-                    InputsPager(
-                        viewModel = viewModel,
-                        coroutineScope = coroutineScope,
-                        pagerState = inputPagerState
-                    )
-                }
-                1 -> {
-                    ResultsPage(mResponse = mResponse)
-                }
-            }
-        }
-    }
-
-}
-*/
 @Composable
 fun BodyEntersView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
     Column(
@@ -299,11 +219,14 @@ fun BodyEntersView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
 
 @Composable
 fun ParamsView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
+    val paramsValues = remember {
+        viewModel!!.paramsValues
+    }
+
     LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
+        modifier = modifier.fillMaxSize()
     ) {
-        itemsIndexed(items = viewModel?.paramsValues!!.toList()) { index: Int, item: MutableState<ParamModel> ->
+        itemsIndexed(items = paramsValues) { index: Int, item: ParamModel ->
             if (index == 0) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -323,36 +246,28 @@ fun ParamsView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
                 }
             }
             Row(modifier = Modifier.fillMaxWidth()) {
-                val paramItem by remember { item }
                 TextField(
                     modifier = Modifier
                         .fillMaxWidth(.5f)
                         .padding(8.dp),
-                    value = paramItem.name,
+                    value = item.name,
                     onValueChange = {
-                        paramItem.name = it
+                        item.name = it
                     })
                 TextField(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp),
-                    value = paramItem.value,
+                    value = item.value,
                     onValueChange = {
-                        paramItem.value = it
+                        item.value = it
                     })
             }
-            if (index == viewModel.paramsValues.size - 1) {
+            if (index == paramsValues.size - 1) {
                 Button(
                     modifier = Modifier.padding(8.dp),
                     onClick = {
-                        viewModel.paramsValues.add(
-                            mutableStateOf(
-                                ParamModel(
-                                    name = "",
-                                    value = ""
-                                )
-                            )
-                        )
+                        paramsValues.add(ParamModel())
                     }
                 ) {
                     Text(text = "Add Param")
@@ -364,7 +279,6 @@ fun ParamsView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
                 }
             }
         }
-        
     }
 }
 
@@ -440,6 +354,7 @@ fun RequestTypesDropDown(modifier: Modifier = Modifier, mSelectedItem: MutableSt
             modifier = Modifier.fillMaxSize(),
             value = selectedItem,
             onValueChange = { selectedItem = it },
+            readOnly = true,
             trailingIcon = {
                 Icon(icon, "contentDescription", Modifier.clickable { isExpanded = !isExpanded })
             }
