@@ -23,5 +23,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "MPostMan"
 include ':app'
-include ':Models'
 include ':Data'
+include ':Models'

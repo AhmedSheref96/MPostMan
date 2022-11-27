@@ -38,11 +38,11 @@ private val LightColorScheme = lightColors(
 fun MPostManTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+//    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        darkTheme -> DarkColorScheme
+        darkTheme -> LightColorScheme //DarkColorScheme
         else -> LightColorScheme
     }
     val view = LocalView.current

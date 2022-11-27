@@ -3,10 +3,12 @@ package com.el3asas.data.network.home
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.http.*
 import io.ktor.util.*
 import javax.inject.Inject
 
 class HomeService @Inject constructor(private val client: HttpClient) {
+
     suspend fun sendGetApi(
         url: String,
         params: StringValues? = null,
@@ -27,6 +29,7 @@ class HomeService @Inject constructor(private val client: HttpClient) {
         mBody: Any? = null
     ): HttpResponse {
         return client.post(url) {
+            contentType(ContentType.Application.Json)
             url {
                 params?.let { it1 -> parameters.appendAll(it1) }
             }

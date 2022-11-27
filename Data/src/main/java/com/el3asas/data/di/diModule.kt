@@ -36,6 +36,7 @@ object SingletonModule {
                         isLenient = true
                         ignoreUnknownKeys = true
                     }
+                    ContentType.parse("")
                 }
 
                 install(DefaultRequest) {

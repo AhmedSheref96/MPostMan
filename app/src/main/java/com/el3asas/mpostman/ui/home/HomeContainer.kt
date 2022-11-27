@@ -1,39 +1,49 @@
 package com.el3asas.mpostman.ui.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
-import com.el3asas.models.ParamModel
 import com.el3asas.mpostman.MainViewModel
+import com.el3asas.mpostman.ui.home.ui_states.ParamModelUiState
 import com.google.accompanist.pager.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
+
+
+const val RAW_BODY_TYPE = 0
+const val FORM_DATA_BODY_TYPE = 1
+
 
 @Preview(showBackground = true)
-@OptIn(ExperimentalPagerApi::class)
 @Composable
 fun HomeMainContainer(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel? = null
 ) {
+
     val responseValue by remember {
         viewModel?.httpRequestResponse ?: mutableStateOf("")
     }
@@ -42,7 +52,7 @@ fun HomeMainContainer(
     var mainPagesTransaction by remember {
         mutableStateOf(0)
     }
-
+/*
     LaunchedEffect(Unit) {
         snapshotFlow { responseValue }
             .collect {
@@ -50,16 +60,18 @@ fun HomeMainContainer(
                     mainPagesTransaction = 1
             }
     }
-
+*/
     Scaffold(floatingActionButton = {
-        SubmitRequestBtn(viewModel = viewModel)
+        SubmitRequestBtn(viewModel = viewModel) {
+            mainPagesTransaction = 1
+        }
     }) {
         ConstraintLayout(
             modifier = Modifier
                 .padding(it)
                 .fillMaxSize()
         ) {
-            val (baseUrlRef, pathUrlRef, requestTypeRef, pagerRef, inputsTab, resultsTab, submitRequestRef) = createRefs()
+            val (baseUrlRef, pathUrlRef, requestTypeRef, pagerRef) = createRefs()
             BaseUrlPart(
                 modifier = Modifier
                     .padding(8.dp)
@@ -113,7 +125,7 @@ fun InputsPager(
         modifier = modifier
             .fillMaxSize()
     ) {
-        val itemsTitles = listOf("headers", "body")
+        val itemsTitles = listOf("params", "body")
         ScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
             edgePadding = 0.dp,
@@ -151,7 +163,6 @@ fun InputsPager(
                 1 -> BodyEntersView(modifier = modifier, viewModel = viewModel)
             }
         }
-
     }
 }
 
@@ -166,12 +177,19 @@ fun MainPages(
     onClickTab: (Int) -> Unit
 ) {
     Column(modifier = modifier) {
-        Row(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = modifier
+                .background(Color(0xFFCCCCCC))
+                .fillMaxWidth()
+        ) {
             TabBtn(
                 modifier = Modifier
                     .padding(horizontal = 8.dp)
                     .fillMaxWidth(.5f),
-                btnString = "Inputs"
+                btnString = "Inputs",
+                textColor =
+                if (pageTransformation == 0) MaterialTheme.colors.primary
+                else Color(0xFF2C2C2C)
             ) {
                 coroutineScope.launch {
                     onClickTab(0)
@@ -181,7 +199,10 @@ fun MainPages(
                 modifier = Modifier
                     .padding(horizontal = 8.dp)
                     .fillMaxWidth(),
-                btnString = "Results"
+                btnString = "Results",
+                textColor =
+                if (pageTransformation == 1) MaterialTheme.colors.primary
+                else Color(0xFF2C2C2C)
             ) {
                 coroutineScope.launch {
                     onClickTab(1)
@@ -200,7 +221,7 @@ fun MainPages(
                 )
             }
             1 -> {
-                ResultsPage(mResponse = mResponse)
+                ResultsPage(mResponse = mResponse, viewModel = viewModel)
             }
         }
     }
@@ -208,25 +229,107 @@ fun MainPages(
 
 @Composable
 fun BodyEntersView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
+    var bodyType by remember {
+        viewModel!!.bodySelectedType
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Blue)
     ) {
-        Text(text = "enter body enters here", modifier = Modifier.align(CenterHorizontally))
+        Row(
+            modifier = Modifier
+                .background(Color.LightGray)
+                .fillMaxWidth()
+        ) {
+            IconButton(modifier = modifier
+                .height(45.dp)
+                .fillMaxWidth(.5f),
+                onClick = {
+                    if (bodyType != RAW_BODY_TYPE)
+                        bodyType = RAW_BODY_TYPE
+                }) {
+                Row(
+                    Modifier.fillMaxHeight(),
+                    verticalAlignment = CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    RadioButton(
+                        selected = bodyType == RAW_BODY_TYPE,
+                        onClick = {
+                            if (bodyType != RAW_BODY_TYPE)
+                                bodyType = RAW_BODY_TYPE
+                        })
+                    Text(text = "raw-data")
+                }
+            }
+            IconButton(modifier = modifier
+                .height(45.dp)
+                .fillMaxWidth(),
+                onClick = {
+                    if (bodyType != FORM_DATA_BODY_TYPE)
+                        bodyType = FORM_DATA_BODY_TYPE
+                }) {
+                Row(
+                    Modifier.fillMaxHeight(),
+                    verticalAlignment = CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    RadioButton(
+                        selected = bodyType == FORM_DATA_BODY_TYPE,
+                        onClick = {
+                            if (bodyType != FORM_DATA_BODY_TYPE)
+                                bodyType = FORM_DATA_BODY_TYPE
+                        })
+                    Text(text = "form-data")
+                }
+            }
+        }
+
+        if (bodyType == RAW_BODY_TYPE) {
+            RawDataBodyView(viewModel = viewModel)
+        } else {
+            FormDataBodyView(viewModel = viewModel)
+        }
     }
 }
 
 @Composable
-fun ParamsView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
-    val paramsValues = remember {
-        viewModel!!.paramsValues
+fun RawDataBodyView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
+    var rawDataBodyValues by remember {
+        viewModel!!.rawBodyValues
+    }
+    val scrollState = rememberScrollState()
+
+    TextField(
+        value = rawDataBodyValues,
+        modifier = modifier
+            .fillMaxSize()
+            .scrollable(
+                state = scrollState,
+                orientation = Orientation.Vertical,
+                enabled = true
+            ),
+        onValueChange = {
+            rawDataBodyValues = it
+        },
+        placeholder = {
+            Text(text = "Enter json body")
+        }
+    )
+}
+
+@Composable
+fun FormDataBodyView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
+    val formDataBodyValues = remember {
+        viewModel!!.formDataBodyValues
     }
 
     LazyColumn(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize(),
+        state = rememberForeverLazyListState(key = "Overview")
     ) {
-        itemsIndexed(items = paramsValues) { index: Int, item: ParamModel ->
+        itemsIndexed(items = formDataBodyValues) { index: Int, item: MutableState<ParamModelUiState> ->
             if (index == 0) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -245,38 +348,150 @@ fun ParamsView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
                     )
                 }
             }
-            Row(modifier = Modifier.fillMaxWidth()) {
+            val rowModifier = Modifier
+
+            Row(modifier = rowModifier.fillMaxWidth()) {
+                val paramValue by item
                 TextField(
-                    modifier = Modifier
-                        .fillMaxWidth(.5f)
+                    modifier = rowModifier
+                        .fillMaxWidth(.45f)
                         .padding(8.dp),
-                    value = item.name,
+                    value = paramValue.name.value,
                     onValueChange = {
-                        item.name = it
+                        paramValue.name.value = it
                     })
                 TextField(
-                    modifier = Modifier
+                    modifier = rowModifier
+                        .fillMaxWidth(.8f)
+                        .padding(8.dp),
+                    value = paramValue.value.value,
+                    onValueChange = {
+                        paramValue.value.value = it
+                    })
+                IconButton(
+                    modifier = rowModifier
                         .fillMaxWidth()
-                        .padding(8.dp),
-                    value = item.value,
-                    onValueChange = {
-                        item.value = it
-                    })
-            }
-            if (index == paramsValues.size - 1) {
-                Button(
-                    modifier = Modifier.padding(8.dp),
+                        .fillMaxHeight()
+                        .align(CenterVertically),
                     onClick = {
-                        paramsValues.add(ParamModel())
-                    }
-                ) {
-                    Text(text = "Add Param")
+                        if (formDataBodyValues.size <= 1)
+                            formDataBodyValues[index].value = ParamModelUiState()
+                        else
+                            formDataBodyValues.remove(item)
+                    }) {
                     Icon(
-                        imageVector = Icons.Filled.Add,
-                        tint = Color(0xF0FFFFFF),
+                        painter = rememberVectorPainter(image = Icons.Filled.Delete),
+                        tint = Color.Red,
                         contentDescription = ""
                     )
                 }
+            }
+            if (index == formDataBodyValues.size - 1) {
+                Column {
+                    Button(
+                        modifier = Modifier.padding(8.dp),
+                        onClick = { formDataBodyValues.add(mutableStateOf(ParamModelUiState())) }
+                    ) {
+                        Text(text = "Add")
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            tint = Color(0xF0FFFFFF),
+                            contentDescription = ""
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(50.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun ParamsView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
+    val paramsValues = remember {
+        viewModel!!.paramsValues
+    }
+
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize(),
+        state = rememberForeverLazyListState(key = "Overview")
+    ) {
+        itemsIndexed(items = paramsValues) { index: Int, item: MutableState<ParamModelUiState> ->
+            if (index == 0) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth(.5f)
+                            .background(Color.LightGray)
+                            .padding(8.dp),
+                        text = "KEY",
+                    )
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.LightGray)
+                            .padding(8.dp),
+                        text = "VALUE"
+                    )
+                }
+            }
+            val rowModifier = Modifier
+
+            Row(modifier = rowModifier.fillMaxWidth()) {
+                val paramValue by item
+                TextField(
+                    modifier = rowModifier
+                        .fillMaxWidth(.45f)
+                        .padding(8.dp),
+                    value = paramValue.name.value,
+                    onValueChange = {
+                        paramValue.name.value = it
+                    })
+                TextField(
+                    modifier = rowModifier
+                        .fillMaxWidth(.8f)
+                        .padding(8.dp),
+                    value = paramValue.value.value,
+                    onValueChange = {
+                        paramValue.value.value = it
+                    })
+                IconButton(
+                    modifier = rowModifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .align(CenterVertically),
+                    onClick = {
+                        if (paramsValues.size <= 1)
+                            paramsValues[index].value = ParamModelUiState()
+                        else
+                            paramsValues.remove(item)
+                    }) {
+                    Icon(
+                        painter = rememberVectorPainter(image = Icons.Filled.Delete),
+                        tint = Color.Red,
+                        contentDescription = ""
+                    )
+                }
+            }
+            if (index == paramsValues.size - 1) {
+                Column {
+                    Button(
+                        modifier = Modifier.padding(8.dp),
+                        onClick = {
+                            paramsValues.add(mutableStateOf(ParamModelUiState()))
+                        }
+                    ) {
+                        Text(text = "Add Param")
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            tint = Color(0xF0FFFFFF),
+                            contentDescription = ""
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(50.dp))
+                }
+
             }
         }
     }
@@ -285,14 +500,40 @@ fun ParamsView(modifier: Modifier = Modifier, viewModel: MainViewModel?) {
 @Composable
 fun ResultsPage(
     modifier: Modifier = Modifier,
-    mResponse: String
+    mResponse: String,
+    viewModel: MainViewModel?
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Green)
-    ) {
-        Text(modifier = modifier, text = mResponse)
+    val isLoading by remember { viewModel!!.isLoading }
+    if (isLoading) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.LightGray),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = CenterHorizontally
+        ) {
+            CircularProgressIndicator(color = Color.Blue)
+        }
+    } else {
+        val scrollState = rememberScrollState()
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .verticalScroll(enabled = true, state = scrollState)
+                .background(Color.LightGray)
+        ) {
+            var result = mResponse
+            try {
+                result = JSONArray(mResponse).toString(2)
+            } catch (ignored: Exception) {
+                try {
+                    result = JSONObject(mResponse).toString(2)
+                } catch (ignored: Exception) {
+                }
+            }
+
+            Text(modifier = modifier, text = result)
+        }
     }
 }
 
@@ -380,30 +621,71 @@ fun RequestTypesDropDown(modifier: Modifier = Modifier, mSelectedItem: MutableSt
 }
 
 @Composable
-fun TabBtn(modifier: Modifier = Modifier, btnString: String, action: () -> Unit) {
-    Button(
+fun TabBtn(modifier: Modifier = Modifier, textColor: Color, btnString: String, action: () -> Unit) {
+    TextButton(
         modifier = modifier,
         onClick = {
             action()
         }) {
-        Text(text = btnString)
+        Text(text = btnString, color = textColor)
     }
 }
 
 @Composable
-fun SubmitRequestBtn(viewModel: MainViewModel?) {
-    ExtendedFloatingActionButton(
-        text = {
-            Row {
-                Text(text = "send request")
-                Icon(
-                    imageVector = Icons.Filled.Send,
-                    modifier = Modifier.size(24.dp),
-                    contentDescription = "send request"
-                )
-            }
-        },
-        onClick = {
-            viewModel?.sendRequest()
-        })
+fun SubmitRequestBtn(viewModel: MainViewModel?, onClickSendRequest: () -> Unit) {
+    val isLoading by remember { viewModel!!.isLoading }
+    if (isLoading.not()) {
+        FloatingActionButton(
+            onClick = {
+                viewModel?.sendRequest()
+                onClickSendRequest()
+            }) {
+            Icon(
+                imageVector = Icons.Filled.Send,
+                modifier = Modifier
+                    .size(24.dp)
+                    .rotate(320f),
+                contentDescription = "send request"
+            )
+        }
+    } else {
+        FloatingActionButton(onClick = {}) {
+            CircularProgressIndicator(color = Color.Blue)
+        }
+    }
 }
+
+@Composable
+fun rememberForeverLazyListState(
+    key: String,
+    params: String = "",
+    initialFirstVisibleItemIndex: Int = 0,
+    initialFirstVisibleItemScrollOffset: Int = 0
+): LazyListState {
+    val scrollState = rememberSaveable(saver = LazyListState.Saver) {
+        var savedValue = SaveMap[key]
+        if (savedValue?.params != params) savedValue = null
+        val savedIndex = savedValue?.index ?: initialFirstVisibleItemIndex
+        val savedOffset = savedValue?.scrollOffset ?: initialFirstVisibleItemScrollOffset
+        LazyListState(
+            savedIndex,
+            savedOffset
+        )
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            val lastIndex = scrollState.firstVisibleItemIndex
+            val lastOffset = scrollState.firstVisibleItemScrollOffset
+            SaveMap[key] = KeyParams(params, lastIndex, lastOffset)
+        }
+    }
+    return scrollState
+}
+
+private val SaveMap = mutableMapOf<String, KeyParams>()
+
+private data class KeyParams(
+    val params: String = "",
+    val index: Int,
+    val scrollOffset: Int
+)
