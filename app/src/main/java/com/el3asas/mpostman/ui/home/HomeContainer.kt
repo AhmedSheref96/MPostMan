@@ -22,20 +22,17 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.constraintlayout.compose.Dimension
 import com.el3asas.mpostman.MainViewModel
 import com.el3asas.mpostman.ui.home.ui_states.ParamModelUiState
 import com.google.accompanist.pager.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import me.onebone.toolbar.*
 import org.json.JSONArray
 import org.json.JSONObject
 
-
 const val RAW_BODY_TYPE = 0
 const val FORM_DATA_BODY_TYPE = 1
-
 
 @Preview(showBackground = true)
 @Composable
@@ -43,16 +40,10 @@ fun HomeMainContainer(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel? = null
 ) {
-
-    val responseValue by remember {
-        viewModel?.httpRequestResponse ?: mutableStateOf("")
-    }
-
+    val responseValue by remember { viewModel?.httpRequestResponse ?: mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
-    var mainPagesTransaction by remember {
-        mutableStateOf(0)
-    }
-/*
+    var mainPagesTransaction by remember { mutableStateOf(0) }
+    /*
     LaunchedEffect(Unit) {
         snapshotFlow { responseValue }
             .collect {
@@ -60,54 +51,73 @@ fun HomeMainContainer(
                     mainPagesTransaction = 1
             }
     }
-*/
+    */
+
+    val collapsingState = rememberCollapsingToolbarScaffoldState()
+
     Scaffold(floatingActionButton = {
-        SubmitRequestBtn(viewModel = viewModel) {
-            mainPagesTransaction = 1
-        }
+        SubmitRequestBtn(viewModel = viewModel) { mainPagesTransaction = 1 }
     }) {
-        ConstraintLayout(
-            modifier = Modifier
-                .padding(it)
-                .fillMaxSize()
+        CollapsingToolbarScaffold(
+            modifier = Modifier.padding(it),
+            state = collapsingState,
+            scrollStrategy = ScrollStrategy.EnterAlways,
+            toolbar = {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    BaseUrlPart(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .fillMaxWidth(), mBaseUrl = viewModel?.baseUrl
+                    )
+                    UrlEnteringPart(
+                        modifier = Modifier
+                            .padding(8.dp),
+                        viewModel = viewModel,
+                        mPathUrl = viewModel?.pathUrl
+                    )
+                }
+            }
         ) {
-            val (baseUrlRef, pathUrlRef, requestTypeRef, pagerRef) = createRefs()
-            BaseUrlPart(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .fillMaxWidth()
-                    .constrainAs(baseUrlRef) {
-                        top.linkTo(parent.top)
-                        absoluteLeft.linkTo(parent.absoluteLeft)
-                        absoluteRight.linkTo(parent.absoluteRight)
-                    }, mBaseUrl = viewModel?.baseUrl
-            )
-
-            UrlEnteringPart(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .constrainAs(pathUrlRef) {
-                        top.linkTo(baseUrlRef.bottom)
-                        absoluteLeft.linkTo(parent.absoluteLeft)
-                        absoluteRight.linkTo(requestTypeRef.absoluteLeft)
-                    },
-                viewModel = viewModel,
-                mPathUrl = viewModel?.pathUrl
-            )
-
-            MainPages(
-                modifier = Modifier
-                    .constrainAs(pagerRef) {
-                        top.linkTo(pathUrlRef.bottom)
-                        bottom.linkTo(parent.bottom)
-                        height = Dimension.fillToConstraints
-                    },
-                pageTransformation = mainPagesTransaction,
-                coroutineScope = coroutineScope,
-                viewModel = viewModel,
-                mResponse = responseValue
-            ) { pageIndex ->
-                mainPagesTransaction = pageIndex
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = modifier) {
+                    Row(
+                        modifier = modifier
+                            .background(Color(0xFFCCCCCC))
+                            .fillMaxWidth()
+                    ) {
+                        TabBtn(
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp)
+                                .fillMaxWidth(.5f),
+                            btnString = "Inputs",
+                            textColor =
+                            if (mainPagesTransaction == 0) MaterialTheme.colors.primary
+                            else Color(0xFF2C2C2C)
+                        ) {
+                            coroutineScope.launch { mainPagesTransaction = 0 }
+                        }
+                        TabBtn(
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp)
+                                .fillMaxWidth(),
+                            btnString = "Results",
+                            textColor =
+                            if (mainPagesTransaction == 1) MaterialTheme.colors.primary
+                            else Color(0xFF2C2C2C)
+                        ) {
+                            coroutineScope.launch { mainPagesTransaction = 1 }
+                        }
+                    }
+                    MainPages(
+                        modifier = Modifier,
+                        pageTransformation = mainPagesTransaction,
+                        coroutineScope = coroutineScope,
+                        viewModel = viewModel,
+                        mResponse = responseValue
+                    )
+                }
             }
         }
     }
@@ -139,9 +149,7 @@ fun InputsPager(
                 Tab(modifier = Modifier.background(MaterialTheme.colors.primarySurface),
                     selected = pagerState.currentPage == itemPos,
                     onClick = {
-                        coroutineScope.launch {
-                            pagerState.scrollToPage(itemPos)
-                        }
+                        coroutineScope.launch { pagerState.scrollToPage(itemPos) }
                     }
                 ) {
                     Text(
@@ -173,58 +181,22 @@ fun MainPages(
     pageTransformation: Int,
     coroutineScope: CoroutineScope,
     viewModel: MainViewModel?,
-    mResponse: String,
-    onClickTab: (Int) -> Unit
+    mResponse: String
 ) {
-    Column(modifier = modifier) {
-        Row(
-            modifier = modifier
-                .background(Color(0xFFCCCCCC))
-                .fillMaxWidth()
-        ) {
-            TabBtn(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .fillMaxWidth(.5f),
-                btnString = "Inputs",
-                textColor =
-                if (pageTransformation == 0) MaterialTheme.colors.primary
-                else Color(0xFF2C2C2C)
-            ) {
-                coroutineScope.launch {
-                    onClickTab(0)
-                }
-            }
-            TabBtn(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .fillMaxWidth(),
-                btnString = "Results",
-                textColor =
-                if (pageTransformation == 1) MaterialTheme.colors.primary
-                else Color(0xFF2C2C2C)
-            ) {
-                coroutineScope.launch {
-                    onClickTab(1)
-                }
-            }
+    when (pageTransformation) {
+        0 -> {
+            val inputPagerState = rememberPagerState()
+            InputsPager(
+                modifier = modifier,
+                pagerState = inputPagerState,
+                coroutineScope = coroutineScope,
+                viewModel = viewModel
+            )
         }
-
-        when (pageTransformation) {
-            0 -> {
-                val inputPagerState = rememberPagerState()
-                InputsPager(
-                    modifier = modifier,
-                    pagerState = inputPagerState,
-                    coroutineScope = coroutineScope,
-                    viewModel = viewModel
-                )
-            }
             1 -> {
                 ResultsPage(mResponse = mResponse, viewModel = viewModel)
             }
         }
-    }
 }
 
 @Composable

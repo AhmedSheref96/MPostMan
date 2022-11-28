@@ -89,6 +89,8 @@ dependencies {
 
     //gson
     implementation 'com.google.code.gson:gson:2.10'
+    //collapsing toolbar
+    implementation "me.onebone:toolbar-compose:2.3.5"
 
 
 }
